@@ -1,0 +1,81 @@
+plugins {
+    id 'java'
+    id 'scala'
+    id 'jacoco'
+    id 'org.sonarqube' version "2.7"
+    id 'com.github.johnrengelman.shadow' version '4.0.4'
+}
+
+group 'com.mdstech.sample'
+version '1.0-SNAPSHOT'
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+    mavenLocal()
+}
+
+ext {
+    scalaVersion = "2.12"
+    akkaVersion = "2.5.22"
+    akkaHttpVersion = "10.1.8"
+}
+
+dependencies {
+    compile "com.typesafe.akka:akka-actor_${scalaVersion}:${akkaVersion}"
+    compile "com.typesafe.akka:akka-stream_${scalaVersion}:${akkaVersion}"
+    compile "com.typesafe.akka:akka-http_${scalaVersion}:${akkaHttpVersion}"
+    compile "com.typesafe.akka:akka-http-spray-json_${scalaVersion}:${akkaHttpVersion}"
+    compile "com.typesafe.akka:akka-cluster_${scalaVersion}:${akkaVersion}"
+    compile "com.typesafe.akka:akka-cluster-sharding_${scalaVersion}:${akkaVersion}"
+    compile "com.typesafe.akka:akka-cluster-tools_${scalaVersion}:${akkaVersion}"
+    compile "com.typesafe.akka:akka-persistence_${scalaVersion}:${akkaVersion}"
+    compile "com.typesafe.akka:akka-slf4j_${scalaVersion}:${akkaVersion}"
+    compile "org.slf4j:slf4j-simple:1.7.25"
+    compile "com.h2database:h2:1.4.197"
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+    testCompile "org.scalatest:scalatest_${scalaVersion}:3.0.7"
+    testCompile "com.typesafe.akka:akka-http-testkit_${scalaVersion}:${akkaHttpVersion}"
+    testCompile "com.typesafe.akka:akka-stream-testkit_${scalaVersion}:${akkaVersion}"
+}
+
+sonarqube {
+    properties {
+        property "sonar.sourceEncoding", "UTF-8"
+        property "sonar.sources", "src/main/scala, src/main/java"
+        property "sonar.tests", "src/test/scala, src/test/java"
+        property "sonar.scala.version", "2.12"
+        property "sonar.java.coveragePlugin", "jacoco"
+        property "sonar.core.codeCoveragePlugin", "scoverage"
+
+        property "sonar.projectName", "sample-akka-docker-cluster"
+        property "sonar.host.url", "http://${rootProject.properties['sonarHostName']}:9000"
+        property "sonar.login", "${rootProject.properties['sonarWebUserName']}"
+        property "sonar.password", "${rootProject.properties['sonarWebPassword']}"
+
+        property "sonar.jacoco.reportPath", "build/jacoco/test.exec"
+        property "sonar.junit.reportPaths", "build/test-results/test"
+        property "sonar.scala.coverage.reportPaths", "build/reports/scoverage/scoverage.xml"
+        property "sonar.scala.scapegoat.reportPath", "build/reports/scapegoat/scapegoat.xml"
+    }
+}
+
+jar {
+    manifest {
+        attributes "Main-Class": "com.mdstech.sample.Application"
+        attributes "Build-Version": version
+    }
+    from {
+        configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+    archiveName 'fat.jar'
+}
+
+shadowJar {
+    transform(com.github.jengelman.gradle.plugins.shadow.transformers.AppendingTransformer) {
+        resource = 'reference.conf'
+    }
+}
+
+tasks.build.dependsOn tasks.shadowJar
